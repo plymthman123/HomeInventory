@@ -1,16 +1,39 @@
+import { useEffect, useState } from 'react'
 import { Redirect, Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { supabase } from '@/lib/supabase'
 import { useSession } from '@/hooks/useSession'
 import { useThemeColors } from '@/hooks/useColorScheme'
 
 export default function AppLayout() {
   const { session, loading } = useSession()
   const colors = useThemeColors()
+  const [hasHousehold, setHasHousehold]           = useState<boolean | null>(null)
+  const [checkingHousehold, setCheckingHousehold] = useState(true)
 
-  // Guard: send unauthenticated users to login
-  if (!loading && !session) {
-    return <Redirect href="/(auth)/login" />
-  }
+  useEffect(() => {
+    if (!session) {
+      setCheckingHousehold(false)
+      return
+    }
+    supabase
+      .from('household_members')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setHasHousehold(!!data)
+        setCheckingHousehold(false)
+      })
+  }, [session])
+
+  if (loading || checkingHousehold) return null
+
+  // Not logged in → send to login
+  if (!session) return <Redirect href="/(auth)/login" />
+
+  // Logged in but no household yet → send to onboarding
+  if (hasHousehold === false) return <Redirect href="/onboarding" />
 
   return (
     <Tabs

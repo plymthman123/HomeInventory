@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,20 +12,18 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
-import { createHousehold } from '@/lib/household'
 import { useThemeColors } from '@/hooks/useColorScheme'
 
 export default function RegisterScreen() {
   const colors = useThemeColors()
-  const [displayName, setDisplayName]       = useState('')
-  const [householdName, setHouseholdName]   = useState('')
-  const [email, setEmail]                   = useState('')
-  const [password, setPassword]             = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading]               = useState(false)
+  const [displayName, setDisplayName]           = useState('')
+  const [email, setEmail]                       = useState('')
+  const [password, setPassword]                 = useState('')
+  const [confirmPassword, setConfirmPassword]   = useState('')
+  const [loading, setLoading]                   = useState(false)
 
   async function handleRegister() {
-    if (!displayName || !householdName || !email || !password) {
+    if (!displayName || !email || !password) {
       Alert.alert('Missing fields', 'Please fill in all fields.')
       return
     }
@@ -41,7 +38,6 @@ export default function RegisterScreen() {
 
     setLoading(true)
     try {
-      // 1. Create the auth user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -51,12 +47,10 @@ export default function RegisterScreen() {
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('User creation failed.')
 
-      // 2. Create household + seed locations
-      await createHousehold(data.user.id, householdName)
-
+      // Household is created after email confirmation, on first login (onboarding screen)
       Alert.alert(
         'Check your email',
-        'We sent you a confirmation link. Please verify your email before signing in.',
+        'We sent you a confirmation link. Please verify your email then sign in.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       )
     } catch (err: any) {
@@ -92,15 +86,6 @@ export default function RegisterScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
-        />
-
-        <Text style={s.sectionLabel}>Household</Text>
-        <TextInput
-          style={s.input}
-          placeholder="Household name (e.g. The Smith Family)"
-          placeholderTextColor={colors.textSecondary}
-          value={householdName}
-          onChangeText={setHouseholdName}
         />
 
         <Text style={s.sectionLabel}>Password</Text>

@@ -257,6 +257,10 @@ export interface Database {
         Args: { hid: string }
         Returns: boolean
       }
+      create_household_for_user: {
+        Args: { p_user_id: string; p_household_name: string }
+        Returns: string  // returns the new household UUID
+      }
     }
     Enums: {}
   }

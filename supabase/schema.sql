@@ -184,6 +184,10 @@ returns boolean as $$
 $$ language sql security definer;
 
 -- ── households ──────────────────────────────────────────────
+create policy "Authenticated users can create a household"
+  on households for insert
+  with check (auth.uid() is not null);
+
 create policy "Members can view their household"
   on households for select
   using (is_household_member(id));
@@ -193,6 +197,10 @@ create policy "Admins can update their household"
   using (is_household_admin(id));
 
 -- ── household_members ────────────────────────────────────────
+create policy "Users can add themselves to a household"
+  on household_members for insert
+  with check (auth.uid() is not null and user_id = auth.uid());
+
 create policy "Members can view household members"
   on household_members for select
   using (is_household_member(household_id));
