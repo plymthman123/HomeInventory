@@ -1,5 +1,12 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
-// getDefaultConfig reads tsconfig.json paths (including the @/* alias)
-// and wires them into Metro's resolver — required for Vercel builds.
-module.exports = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
+
+// Belt-and-suspenders: Metro's native alias resolver (Metro >= 0.80 / RN 0.81)
+// handles @/ in case the Babel plugin alone isn't sufficient in the build env.
+config.resolver.alias = {
+  '@': path.resolve(__dirname),
+};
+
+module.exports = config;
