@@ -5,8 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 import { Database } from '@/types/database.types'
 
-// On native (iOS/Android): use SecureStore — tokens are encrypted in the device keychain.
-// On web: SecureStore has no implementation, so fall back to AsyncStorage.
+// On native: tokens are encrypted in the device keychain via SecureStore.
+// On web / static rendering: fall back to AsyncStorage.
 const SecureStoreAdapter =
   Platform.OS === 'web'
     ? AsyncStorage
@@ -16,13 +16,16 @@ const SecureStoreAdapter =
         removeItem: (key: string) => SecureStore.deleteItemAsync(key),
       }
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
+// Warn rather than throw — throwing at module level breaks Expo's static
+// rendering pass (the build-time HTML generation that runs in Node.js).
+// The app will surface an auth error at runtime if vars are missing.
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables.\n' +
-      'Copy .env.example to .env.local and fill in your project values.'
+  console.warn(
+    '[supabase] EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY is not set. ' +
+    'Copy .env.example to .env.local and fill in your project values.'
   )
 }
 

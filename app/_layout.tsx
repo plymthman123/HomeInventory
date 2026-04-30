@@ -5,8 +5,9 @@ import * as SplashScreen from 'expo-splash-screen'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
 
-// Prevent the splash screen from auto-hiding until auth state is known
-SplashScreen.preventAutoHideAsync()
+// Prevent the splash screen from auto-hiding until auth state is known.
+// Wrapped in try/catch because SplashScreen is a no-op during static rendering.
+try { SplashScreen.preventAutoHideAsync() } catch {}
 
 export default function RootLayout() {
   const { loading } = useSession()
