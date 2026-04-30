@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
 import type { Location } from '@/types/database.types'
+import { PageContainer } from '@/components/PageContainer'
 
 interface LocationWithCount extends Location {
   item_count: number
@@ -93,6 +94,7 @@ export default function LocationsScreen() {
   const s = styles(colors)
 
   return (
+    <PageContainer>
     <View style={s.container}>
       {loading ? (
         <View style={s.centered}>
@@ -154,6 +156,7 @@ export default function LocationsScreen() {
         </View>
       </Modal>
     </View>
+    </PageContainer>
   )
 }
 

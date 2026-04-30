@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
+import { PageContainer } from '@/components/PageContainer'
 
 interface DashboardStats {
   totalItems: number
@@ -92,6 +93,7 @@ export default function DashboardScreen() {
   }
 
   return (
+    <PageContainer>
     <ScrollView style={s.container} contentContainerStyle={s.content}>
       <Text style={s.heading}>{householdName}</Text>
       <Text style={s.subheading}>Household Inventory</Text>
@@ -159,6 +161,7 @@ export default function DashboardScreen() {
         />
       </View>
     </ScrollView>
+    </PageContainer>
   )
 }
 

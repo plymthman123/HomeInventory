@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
+import { PageContainer } from '@/components/PageContainer'
 
 interface Member {
   id: string
@@ -96,6 +97,7 @@ export default function SettingsScreen() {
   const s = styles(colors)
 
   return (
+    <PageContainer narrow>
     <ScrollView style={s.container} contentContainerStyle={s.content}>
       {/* Household */}
       <Text style={s.sectionLabel}>Household</Text>
@@ -182,6 +184,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </PageContainer>
   )
 }
 

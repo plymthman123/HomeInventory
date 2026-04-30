@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
+import { PageContainer } from '@/components/PageContainer'
 
 interface LocationValue {
   locationName: string
@@ -107,6 +108,7 @@ export default function ReportsScreen() {
   }
 
   return (
+    <PageContainer>
     <ScrollView style={s.container} contentContainerStyle={s.content}>
       {/* Summary */}
       <View style={s.summaryRow}>
@@ -175,6 +177,7 @@ export default function ReportsScreen() {
         ))
       )}
     </ScrollView>
+    </PageContainer>
   )
 }
 
