@@ -32,7 +32,7 @@ app/
       [id].tsx              Item detail + delete
     locations.tsx           Location list + add modal
     reports.tsx             Value by location + warranty expiry
-    settings.tsx            Members, invite, sign out
+    settings.tsx            Members, invite, sign out, account/household deletion
 components/
   Sidebar.tsx               Desktop/tablet sidebar navigation
   PageContainer.tsx         Centres + caps content width on web (960px max)
@@ -50,6 +50,7 @@ constants/
 supabase/
   schema.sql                Full DB schema + RLS policies (source of truth)
   schema_patch_003.sql      create_household_for_user SECURITY DEFINER function
+  schema_patch_004.sql      delete_account + delete_household_and_account functions
   reset.sql                 Drops all tables (use before re-running schema.sql)
   seed.sql                  Reference seed data
 ```
@@ -65,9 +66,14 @@ In **Supabase SQL Editor**, run `supabase/schema.sql`. This creates:
 - Indexes, `updated_at` triggers, Row Level Security policies
 - Helper functions: `is_household_member()`, `is_household_admin()`
 
-### 2. Run the household creation function
+### 2. Run the schema patches
 
-Run `supabase/schema_patch_003.sql`. This creates the `create_household_for_user` SECURITY DEFINER function used during onboarding. This is required — without it, new user setup will fail with an RLS error.
+Run each patch in order in the **SQL Editor**:
+
+| Patch | Purpose |
+|-------|---------|
+| `schema_patch_003.sql` | `create_household_for_user` — required for onboarding |
+| `schema_patch_004.sql` | `delete_account` + `delete_household_and_account` — required for account deletion |
 
 ### 3. Create storage buckets
 
@@ -188,6 +194,28 @@ To wipe all data and start fresh:
 2. Delete test users in **Authentication → Users**
 3. Re-run `supabase/schema.sql`
 4. Re-run `supabase/schema_patch_003.sql`
+5. Re-run `supabase/schema_patch_004.sql`
+
+---
+
+## Account Deletion
+
+Both admins and members can delete their account from **Settings → Account → Delete Account**. The flow:
+
+1. **Choose item disposition** (skipped if sole member of household):
+   - *Transfer to another member* — select which member receives ownership of your items
+   - *Delete items I own* — permanently removes items where you are the owner
+
+2. **Confirm** — shows a plain-English summary of what will be deleted, then executes via `delete_account()` RPC.
+
+**Admin-only: Delete Household & All Accounts** (Settings → Danger Zone):
+- Wipes all items, photos, warranties, locations, and invites via cascade
+- Deletes every member's auth account
+- Irreversible — shown only to admins
+
+Edge cases handled in the SQL function:
+- If the departing admin is the only admin, the oldest remaining member is auto-promoted
+- If the departing user is the sole household member, the household is deleted automatically
 
 ---
 

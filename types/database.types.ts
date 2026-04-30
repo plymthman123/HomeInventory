@@ -1,5 +1,9 @@
 // Auto-generated types matching supabase/schema.sql
 // Regenerate with: npx supabase gen types typescript --linked > types/database.types.ts
+//
+// NOTE: Relationships arrays are required by @supabase/postgrest-js ≥ 2.x so
+// that the client can resolve join types. Each entry mirrors a foreign-key
+// constraint in the schema.
 
 export type Json =
   | string
@@ -29,6 +33,7 @@ export interface Database {
           name?: string
           updated_at?: string
         }
+        Relationships: []
       }
       household_members: {
         Row: {
@@ -54,6 +59,15 @@ export interface Database {
           display_name?: string | null
           avatar_url?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: 'household_members_household_id_fkey'
+            columns: ['household_id']
+            isOneToOne: false
+            referencedRelation: 'households'
+            referencedColumns: ['id']
+          },
+        ]
       }
       locations: {
         Row: {
@@ -80,6 +94,15 @@ export interface Database {
           icon?: string | null
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'locations_household_id_fkey'
+            columns: ['household_id']
+            isOneToOne: false
+            referencedRelation: 'households'
+            referencedColumns: ['id']
+          },
+        ]
       }
       items: {
         Row: {
@@ -142,6 +165,29 @@ export interface Database {
           primary_photo_url?: string | null
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'items_household_id_fkey'
+            columns: ['household_id']
+            isOneToOne: false
+            referencedRelation: 'households'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'items_location_id_fkey'
+            columns: ['location_id']
+            isOneToOne: false
+            referencedRelation: 'locations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'items_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'household_members'
+            referencedColumns: ['id']
+          },
+        ]
       }
       item_photos: {
         Row: {
@@ -163,6 +209,15 @@ export interface Database {
         Update: {
           is_primary?: boolean
         }
+        Relationships: [
+          {
+            foreignKeyName: 'item_photos_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items'
+            referencedColumns: ['id']
+          },
+        ]
       }
       item_receipts: {
         Row: {
@@ -186,6 +241,15 @@ export interface Database {
         Update: {
           file_name?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: 'item_receipts_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items'
+            referencedColumns: ['id']
+          },
+        ]
       }
       warranties: {
         Row: {
@@ -218,6 +282,15 @@ export interface Database {
           document_url?: string | null
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'warranties_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'items'
+            referencedColumns: ['id']
+          },
+        ]
       }
       household_invites: {
         Row: {
@@ -245,9 +318,18 @@ export interface Database {
         Update: {
           accepted_at?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: 'household_invites_household_id_fkey'
+            columns: ['household_id']
+            isOneToOne: false
+            referencedRelation: 'households'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
-    Views: {}
+    Views: Record<string, never>
     Functions: {
       is_household_member: {
         Args: { hid: string }
@@ -259,21 +341,29 @@ export interface Database {
       }
       create_household_for_user: {
         Args: { p_user_id: string; p_household_name: string }
-        Returns: string  // returns the new household UUID
+        Returns: string
+      }
+      delete_account: {
+        Args: { p_transfer_to_member_id?: string; p_delete_my_items?: boolean }
+        Returns: undefined
+      }
+      delete_household_and_account: {
+        Args: Record<string, never>
+        Returns: undefined
       }
     }
-    Enums: {}
+    Enums: Record<string, never>
   }
 }
 
 // Convenience row types
-export type Household      = Database['public']['Tables']['households']['Row']
+export type Household       = Database['public']['Tables']['households']['Row']
 export type HouseholdMember = Database['public']['Tables']['household_members']['Row']
-export type Location       = Database['public']['Tables']['locations']['Row']
-export type Item           = Database['public']['Tables']['items']['Row']
-export type ItemPhoto      = Database['public']['Tables']['item_photos']['Row']
-export type ItemReceipt    = Database['public']['Tables']['item_receipts']['Row']
-export type Warranty       = Database['public']['Tables']['warranties']['Row']
+export type Location        = Database['public']['Tables']['locations']['Row']
+export type Item            = Database['public']['Tables']['items']['Row']
+export type ItemPhoto       = Database['public']['Tables']['item_photos']['Row']
+export type ItemReceipt     = Database['public']['Tables']['item_receipts']['Row']
+export type Warranty        = Database['public']['Tables']['warranties']['Row']
 export type HouseholdInvite = Database['public']['Tables']['household_invites']['Row']
 
 // Joined/extended types used in the UI
