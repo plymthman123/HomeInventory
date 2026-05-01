@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -11,16 +12,18 @@ import {
   Alert,
 } from 'react-native'
 import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 
 export default function RegisterScreen() {
   const colors = useThemeColors()
-  const [displayName, setDisplayName]           = useState('')
-  const [email, setEmail]                       = useState('')
-  const [password, setPassword]                 = useState('')
-  const [confirmPassword, setConfirmPassword]   = useState('')
-  const [loading, setLoading]                   = useState(false)
+  const [displayName, setDisplayName]         = useState('')
+  const [email, setEmail]                     = useState('')
+  const [password, setPassword]               = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading]                 = useState(false)
+  const [emailSent, setEmailSent]             = useState(false)
 
   async function handleRegister() {
     if (!displayName || !email || !password) {
@@ -38,21 +41,30 @@ export default function RegisterScreen() {
 
     setLoading(true)
     try {
+      // emailRedirectTo tells Supabase where to send the user after they click
+      // the confirmation link. On web we use the current origin (works in both
+      // dev and production automatically). On native we use the app's URL scheme
+      // so iOS/Android opens the app directly.
+      const emailRedirectTo =
+        Platform.OS === 'web'
+          ? (typeof window !== 'undefined' ? window.location.origin : undefined)
+          : 'homeinventory://'
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { display_name: displayName } },
+        options: {
+          data: { display_name: displayName },
+          emailRedirectTo,
+        },
       })
 
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('User creation failed.')
 
-      // Household is created after email confirmation, on first login (onboarding screen)
-      Alert.alert(
-        'Check your email',
-        'We sent you a confirmation link. Please verify your email then sign in.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-      )
+      // data.session is null when email confirmation is required.
+      // Show the "check your email" screen instead of an Alert.
+      setEmailSent(true)
     } catch (err: any) {
       Alert.alert('Registration failed', err.message)
     } finally {
@@ -62,6 +74,31 @@ export default function RegisterScreen() {
 
   const s = styles(colors)
 
+  // ── Email-sent confirmation screen ──────────────────────────────────────────
+  if (emailSent) {
+    return (
+      <View style={[s.container, s.sentContainer]}>
+        <View style={[s.iconCircle, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="mail-outline" size={36} color={colors.primary} />
+        </View>
+        <Text style={[s.sentTitle, { color: colors.text }]}>Check your email</Text>
+        <Text style={[s.sentBody, { color: colors.textSecondary }]}>
+          We sent a confirmation link to{'\n'}
+          <Text style={{ fontWeight: '600', color: colors.text }}>{email}</Text>
+          {'\n\n'}
+          Click the link in that email to verify your account, then sign in below.
+        </Text>
+        <TouchableOpacity
+          style={[s.button, { backgroundColor: colors.primary }]}
+          onPress={() => router.replace('/(auth)/login')}
+        >
+          <Text style={s.buttonText}>Go to Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  // ── Registration form ────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={s.container}
@@ -153,7 +190,6 @@ const styles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     button: {
       height: 52,
-      backgroundColor: colors.primary,
       borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
@@ -163,5 +199,31 @@ const styles = (colors: ReturnType<typeof useThemeColors>) =>
       color: '#fff',
       fontSize: 17,
       fontWeight: '600',
+    },
+    // Email-sent state
+    sentContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 32,
+    },
+    iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    sentTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    sentBody: {
+      fontSize: 15,
+      lineHeight: 22,
+      textAlign: 'center',
+      marginBottom: 32,
     },
   })

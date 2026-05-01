@@ -39,6 +39,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // On web, Supabase reads the #access_token hash from the URL automatically
+    // after email confirmation redirects back to the app.
+    // On native we handle deep links manually in app/_layout.tsx.
+    detectSessionInUrl: Platform.OS === 'web',
   },
 })

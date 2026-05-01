@@ -50,9 +50,12 @@ constants/
 supabase/
   schema.sql                Full DB schema + RLS policies (source of truth)
   schema_patch_003.sql      create_household_for_user SECURITY DEFINER function
-  schema_patch_004.sql      delete_account + delete_household_and_account functions
+  schema_patch_004.sql      cleanup_account + cleanup_household_delete functions
   reset.sql                 Drops all tables (use before re-running schema.sql)
   seed.sql                  Reference seed data
+  functions/
+    delete-user/
+      index.ts              Edge Function — deletes auth accounts via GoTrue Admin API
 ```
 
 ---
@@ -73,7 +76,7 @@ Run each patch in order in the **SQL Editor**:
 | Patch | Purpose |
 |-------|---------|
 | `schema_patch_003.sql` | `create_household_for_user` — required for onboarding |
-| `schema_patch_004.sql` | `delete_account` + `delete_household_and_account` — required for account deletion |
+| `schema_patch_004.sql` | `cleanup_account` + `cleanup_household_delete` — required for account deletion |
 
 ### 3. Create storage buckets
 
@@ -85,7 +88,20 @@ In **Supabase Dashboard → Storage**, create three buckets:
 | `item-receipts` | No |
 | `item-documents` | No |
 
-### 4. Use the anon key
+### 4. Deploy the Edge Function
+
+The `delete-user` Edge Function handles account deletion through GoTrue's Admin API. Install the Supabase CLI via Homebrew (not npm), then deploy once:
+
+```bash
+brew install supabase/tap/supabase
+supabase login
+supabase link --project-ref <your-project-ref>   # ref = subdomain in your Supabase URL
+supabase functions deploy delete-user
+```
+
+This is a one-time deploy. The function lives on Supabase's infrastructure and is called by both the mobile and web app — no Vercel or EAS changes needed.
+
+### 5. Use the anon key
 
 In **Supabase Dashboard → Settings → API**, copy the **anon public** key. Never use the service role key in the app.
 
@@ -196,6 +212,8 @@ To wipe all data and start fresh:
 4. Re-run `supabase/schema_patch_003.sql`
 5. Re-run `supabase/schema_patch_004.sql`
 
+> The Edge Function does not need to be redeployed — it is unaffected by a database reset.
+
 ---
 
 ## Account Deletion
@@ -206,16 +224,56 @@ Both admins and members can delete their account from **Settings → Account →
    - *Transfer to another member* — select which member receives ownership of your items
    - *Delete items I own* — permanently removes items where you are the owner
 
-2. **Confirm** — shows a plain-English summary of what will be deleted, then executes via `delete_account()` RPC.
+2. **Confirm** — shows a plain-English summary of what will be deleted, then calls the `delete-user` Edge Function.
 
 **Admin-only: Delete Household & All Accounts** (Settings → Danger Zone):
 - Wipes all items, photos, warranties, locations, and invites via cascade
 - Deletes every member's auth account
 - Irreversible — shown only to admins
 
-Edge cases handled in the SQL function:
+Edge cases handled automatically:
 - If the departing admin is the only admin, the oldest remaining member is auto-promoted
 - If the departing user is the sole household member, the household is deleted automatically
+
+### How deletion works internally
+
+The app uses a two-step approach to avoid leaving emails stuck in Supabase's auth system:
+
+1. **`cleanup_account` / `cleanup_household_delete` RPC** — handles all data (item transfer, admin promotion, household cascade). Does not touch `auth.users`.
+2. **`delete-user` Edge Function** — calls `supabase.auth.admin.deleteUser()` through GoTrue's Admin API, which properly purges email state so the address can be reused for new registrations immediately.
+
+> Do not delete users via direct SQL (`DELETE FROM auth.users`) — this bypasses GoTrue and leaves the email address permanently locked out of re-registration.
+
+### Debugging stuck emails (SQL Editor)
+
+If a test account's email can't be reused, run these in the **Supabase SQL Editor** to check for leftover auth state:
+
+```sql
+-- Check if the user record still exists
+SELECT id, email, email_confirmed_at, created_at
+FROM auth.users
+WHERE email = 'stuck@example.com';
+
+-- Check for orphaned identity records
+SELECT * FROM auth.identities
+WHERE email = 'stuck@example.com';
+
+-- Check for lingering confirmation tokens
+SELECT * FROM auth.one_time_tokens
+WHERE relates_to = 'stuck@example.com';
+```
+
+If any rows are returned, a hard delete will cascade and clean everything up:
+
+```sql
+DELETE FROM auth.users WHERE email = 'stuck@example.com';
+```
+
+If no rows exist and the confirmation email still doesn't arrive, the issue is **Supabase's project-wide email rate limit** (≈ 2–3 emails/hour on the free plan), not leftover data. The fastest workaround during development:
+
+**Supabase Dashboard → Authentication → Settings → disable "Enable email confirmations"**
+
+Re-enable before going to production.
 
 ---
 
