@@ -89,7 +89,7 @@ export default function RegisterScreen() {
           Click the link in that email to verify your account, then sign in below.
         </Text>
         <TouchableOpacity
-          style={[s.button, { backgroundColor: colors.primary }]}
+          style={s.button}
           onPress={() => router.replace('/(auth)/login')}
         >
           <Text style={s.buttonText}>Go to Sign In</Text>
@@ -190,6 +190,7 @@ const styles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     button: {
       height: 52,
+      backgroundColor: colors.primary,
       borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
