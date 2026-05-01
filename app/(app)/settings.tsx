@@ -117,13 +117,13 @@ export default function SettingsScreen() {
 
   async function executeDeleteAccount() {
     setDeleting(true)
-    const params: { p_transfer_to_member_id?: string; p_delete_my_items?: boolean } = {}
-    if (itemAction === 'transfer' && transferTarget) {
-      params.p_transfer_to_member_id = transferTarget.id
-    } else if (itemAction === 'delete') {
-      params.p_delete_my_items = true
-    }
-    const { error } = await supabase.rpc('delete_account', params)
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: {
+        action: 'delete_account',
+        transferToMemberId: itemAction === 'transfer' ? transferTarget?.id : undefined,
+        deleteItems: itemAction === 'delete' ? true : undefined,
+      },
+    })
     setDeleting(false)
     if (error) {
       Alert.alert('Error', error.message)
@@ -134,7 +134,9 @@ export default function SettingsScreen() {
 
   async function executeDeleteHousehold() {
     setDeleting(true)
-    const { error } = await supabase.rpc('delete_household_and_account')
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: { action: 'delete_household' },
+    })
     setDeleting(false)
     if (error) {
       Alert.alert('Error', error.message)

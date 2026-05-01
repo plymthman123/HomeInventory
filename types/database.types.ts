@@ -343,13 +343,13 @@ export interface Database {
         Args: { p_user_id: string; p_household_name: string }
         Returns: string
       }
-      delete_account: {
+      cleanup_account: {
         Args: { p_transfer_to_member_id?: string; p_delete_my_items?: boolean }
         Returns: undefined
       }
-      delete_household_and_account: {
+      cleanup_household_delete: {
         Args: Record<string, never>
-        Returns: undefined
+        Returns: string[]
       }
     }
     Enums: Record<string, never>

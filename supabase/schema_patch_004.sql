@@ -1,26 +1,25 @@
 -- ============================================================
--- Patch 004: Account & Household Deletion
+-- Patch 004: Account & Household Deletion (data-only cleanup)
 --
--- Provides two SECURITY DEFINER functions so authenticated users
--- can delete their own account (with optional item transfer) and
--- admins can optionally nuke the entire household.
+-- These functions handle ONLY the data side of deletion:
+-- item transfer/removal, admin promotion, household cascade.
 --
--- Both functions run with postgres-level privileges so they can
--- DELETE from auth.users, which requires bypassing RLS.
+-- Auth user deletion is intentionally NOT done here.
+-- It is performed by the `delete-user` Edge Function via
+-- supabase.auth.admin.deleteUser(), which goes through GoTrue
+-- and properly cleans up email state so the address can be
+-- reused for new registrations immediately.
 -- ============================================================
 
--- delete_account
--- Called by any authenticated user who wants to leave.
+-- cleanup_account
 --
--- p_transfer_to_member_id  – household_members.id to receive owned items.
---                            NULL means items.owner_id becomes NULL (unassigned).
--- p_delete_my_items        – true means permanently delete items owned by caller.
+-- Called before deleting a user's auth account. Handles:
+--   • Item transfer or deletion for items owned by the caller
+--   • Auto-promoting the oldest remaining member to admin if needed
+--   • Wiping the whole household (cascade) if the caller is the sole member
 --
--- If the caller is the sole admin with no other members the household
--- itself is also deleted (cascades items, locations, invites).
--- If the caller is the sole admin with other members the oldest other
--- member is promoted to admin before the caller is removed.
-create or replace function delete_account(
+-- Does NOT touch auth.users — that is the Edge Function's job.
+create or replace function cleanup_account(
   p_transfer_to_member_id uuid    default null,
   p_delete_my_items       boolean default false
 )
@@ -30,12 +29,11 @@ security definer
 set search_path = public
 as $$
 declare
-  v_member_id        uuid;
-  v_household_id     uuid;
-  v_other_admins     int;
-  v_other_members    int;
+  v_member_id     uuid;
+  v_household_id  uuid;
+  v_other_admins  int;
+  v_other_members int;
 begin
-  -- Resolve the caller's member record
   select id, household_id
   into   v_member_id, v_household_id
   from   household_members
@@ -45,7 +43,7 @@ begin
     raise exception 'User is not a member of any household';
   end if;
 
-  -- Handle item disposition before the cascade wipes the member row
+  -- Item disposition
   if p_transfer_to_member_id is not null then
     if not exists (
       select 1 from household_members
@@ -58,9 +56,10 @@ begin
   elsif p_delete_my_items then
     delete from items where owner_id = v_member_id;
   end if;
-  -- If neither: the FK ON DELETE SET NULL handles it automatically.
+  -- Otherwise items.owner_id stays as-is; the FK ON DELETE SET NULL will null
+  -- it out automatically when the household_members row is removed later.
 
-  -- Admin housekeeping
+  -- Admin housekeeping (only when caller is an admin)
   if exists (
     select 1 from household_members
     where  id = v_member_id and role = 'admin'
@@ -70,7 +69,8 @@ begin
     where  household_id = v_household_id and id <> v_member_id;
 
     if v_other_members = 0 then
-      -- Sole member: wipe the whole household (items, locations cascade)
+      -- Sole member: delete the household so items/locations/invites are
+      -- all removed by cascade before the auth account goes away.
       delete from households where id = v_household_id;
     else
       select count(*) into v_other_admins
@@ -90,57 +90,47 @@ begin
       end if;
     end if;
   end if;
-
-  -- Deleting from auth.users cascades to household_members, which sets
-  -- items.owner_id = NULL via the FK ON DELETE SET NULL.
-  delete from auth.users where id = auth.uid();
 end;
 $$;
 
-grant execute on function delete_account(uuid, boolean) to authenticated;
+grant execute on function cleanup_account(uuid, boolean) to authenticated;
 
 
--- delete_household_and_account
--- Admin-only nuclear option: deletes the entire household, every member's
--- auth account, and the caller's account.
-create or replace function delete_household_and_account()
-returns void
+-- cleanup_household_delete
+--
+-- Admin-only. Collects every member's user_id, then deletes the household
+-- (cascades to items, locations, household_members, invites).
+-- Returns the array of user_ids so the Edge Function can delete each
+-- auth account through GoTrue.
+create or replace function cleanup_household_delete()
+returns uuid[]
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_household_id    uuid;
-  v_current_user_id uuid;
-  v_other_uid       uuid;
+  v_household_id uuid;
+  v_user_ids     uuid[];
 begin
-  v_current_user_id := auth.uid();
-
   select household_id
   into   v_household_id
   from   household_members
-  where  user_id = v_current_user_id and role = 'admin';
+  where  user_id = auth.uid() and role = 'admin';
 
   if v_household_id is null then
     raise exception 'Only household admins can delete the household';
   end if;
 
-  -- Remove other members' auth accounts first so the cascade on
-  -- household_members doesn't race with the household deletion.
-  for v_other_uid in
-    select user_id
-    from   household_members
-    where  household_id = v_household_id and user_id <> v_current_user_id
-  loop
-    delete from auth.users where id = v_other_uid;
-  end loop;
+  select array_agg(user_id)
+  into   v_user_ids
+  from   household_members
+  where  household_id = v_household_id;
 
-  -- Wipe the household (cascades: items, locations, invites, household_members)
+  -- Cascade removes items, locations, household_members, invites
   delete from households where id = v_household_id;
 
-  -- Remove the admin's own auth account last
-  delete from auth.users where id = v_current_user_id;
+  return coalesce(v_user_ids, '{}');
 end;
 $$;
 
-grant execute on function delete_household_and_account() to authenticated;
+grant execute on function cleanup_household_delete() to authenticated;
