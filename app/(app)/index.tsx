@@ -13,7 +13,6 @@ import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
 import { PageContainer } from '@/components/PageContainer'
-import { ChatWidget } from '@/components/ChatWidget'
 
 interface DashboardStats {
   totalItems: number
@@ -162,7 +161,6 @@ export default function DashboardScreen() {
           />
         </View>
       </ScrollView>
-      <ChatWidget />
     </PageContainer>
   )
 }

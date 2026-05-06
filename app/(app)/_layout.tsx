@@ -7,6 +7,7 @@ import { useSession } from '@/hooks/useSession'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { Sidebar } from '@/components/Sidebar'
+import { ChatWidget } from '@/components/ChatWidget'
 
 export default function AppLayout() {
   const { session, loading }                                  = useSession()
@@ -40,6 +41,7 @@ export default function AppLayout() {
       {showSidebar && <Sidebar />}
 
       <View style={{ flex: 1 }}>
+        <ChatWidget />
         <Tabs
           screenOptions={{
             tabBarActiveTintColor:   colors.primary,
