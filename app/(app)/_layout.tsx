@@ -41,7 +41,6 @@ export default function AppLayout() {
       {showSidebar && <Sidebar />}
 
       <View style={{ flex: 1 }}>
-        <ChatWidget />
         <Tabs
           screenOptions={{
             tabBarActiveTintColor:   colors.primary,
@@ -103,6 +102,7 @@ export default function AppLayout() {
             }}
           />
         </Tabs>
+        <ChatWidget />
       </View>
     </View>
   )
