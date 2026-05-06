@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase'
 import { useThemeColors } from '@/hooks/useColorScheme'
 import { useSession } from '@/hooks/useSession'
 import { PageContainer } from '@/components/PageContainer'
+import { ChatWidget } from '@/components/ChatWidget'
 
 interface DashboardStats {
   totalItems: number
@@ -94,73 +95,74 @@ export default function DashboardScreen() {
 
   return (
     <PageContainer>
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <Text style={s.heading}>{householdName}</Text>
-      <Text style={s.subheading}>Household Inventory</Text>
+      <ScrollView style={s.container} contentContainerStyle={s.content}>
+        <Text style={s.heading}>{householdName}</Text>
+        <Text style={s.subheading}>Household Inventory</Text>
 
-      {/* Stat cards */}
-      <View style={s.statsRow}>
-        <StatCard
-          label="Total Items"
-          value={String(stats?.totalItems ?? 0)}
-          icon="cube"
-          color={colors.primary}
-          colors={colors}
-        />
-        <StatCard
-          label="Total Value"
-          value={`$${(stats?.totalValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-          icon="cash"
-          color={colors.success}
-          colors={colors}
-        />
-      </View>
-      <View style={s.statsRow}>
-        <StatCard
-          label="Locations"
-          value={String(stats?.locationCount ?? 0)}
-          icon="location"
-          color={colors.warning}
-          colors={colors}
-        />
-        <StatCard
-          label="Warranties Expiring"
-          value={String(stats?.warrantiesExpiringSoon ?? 0)}
-          icon="shield-checkmark"
-          color={colors.danger}
-          colors={colors}
-        />
-      </View>
+        {/* Stat cards */}
+        <View style={s.statsRow}>
+          <StatCard
+            label="Total Items"
+            value={String(stats?.totalItems ?? 0)}
+            icon="cube"
+            color={colors.primary}
+            colors={colors}
+          />
+          <StatCard
+            label="Total Value"
+            value={`$${(stats?.totalValue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            icon="cash"
+            color={colors.success}
+            colors={colors}
+          />
+        </View>
+        <View style={s.statsRow}>
+          <StatCard
+            label="Locations"
+            value={String(stats?.locationCount ?? 0)}
+            icon="location"
+            color={colors.warning}
+            colors={colors}
+          />
+          <StatCard
+            label="Warranties Expiring"
+            value={String(stats?.warrantiesExpiringSoon ?? 0)}
+            icon="shield-checkmark"
+            color={colors.danger}
+            colors={colors}
+          />
+        </View>
 
-      {/* Quick actions */}
-      <Text style={s.sectionTitle}>Quick Actions</Text>
-      <View style={s.actionsGrid}>
-        <QuickAction
-          label="Add Item"
-          icon="add-circle"
-          onPress={() => router.push('/(app)/items/add')}
-          colors={colors}
-        />
-        <QuickAction
-          label="Scan Barcode"
-          icon="barcode"
-          onPress={() => router.push('/(app)/items/scan')}
-          colors={colors}
-        />
-        <QuickAction
-          label="View All Items"
-          icon="list"
-          onPress={() => router.push('/(app)/items')}
-          colors={colors}
-        />
-        <QuickAction
-          label="Reports"
-          icon="bar-chart"
-          onPress={() => router.push('/(app)/reports')}
-          colors={colors}
-        />
-      </View>
-    </ScrollView>
+        {/* Quick actions */}
+        <Text style={s.sectionTitle}>Quick Actions</Text>
+        <View style={s.actionsGrid}>
+          <QuickAction
+            label="Add Item"
+            icon="add-circle"
+            onPress={() => router.push('/(app)/items/add')}
+            colors={colors}
+          />
+          <QuickAction
+            label="Scan Barcode"
+            icon="barcode"
+            onPress={() => router.push('/(app)/items/scan')}
+            colors={colors}
+          />
+          <QuickAction
+            label="View All Items"
+            icon="list"
+            onPress={() => router.push('/(app)/items')}
+            colors={colors}
+          />
+          <QuickAction
+            label="Reports"
+            icon="bar-chart"
+            onPress={() => router.push('/(app)/reports')}
+            colors={colors}
+          />
+        </View>
+      </ScrollView>
+      <ChatWidget />
     </PageContainer>
   )
 }
